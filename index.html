@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Display Webcam Stream</title>
+
+    <style>
+      #container {
+        margin: 0px auto;
+        width: 500px;
+        height: 375px;
+        border: 10px #333 solid;
+      }
+
+      #videoElement {
+        width: 500px;
+        height: 375px;
+        background-color: #666;
+      }
+
+      #dropArea {
+        width: 300px;
+        height: 300px;
+        border: 2px dashed #ccc;
+        margin: 20px auto;
+        padding: 10px;
+        text-align: center;
+        background-size: contain;
+        background-repeat: no-repeat;
+      }
+
+      #controls {
+        text-align: center;
+        margin-top: 10px;
+      }
+
+      #clearButton {
+        font-size: 16px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="container">
+      <video autoplay="true" id="videoElement"></video>
+    </div>
+
+    <div id="dropArea">
+      <p>Drag and drop the image here to save:</p>
+    </div>
+
+    <div id="controls">
+      <button id="clearButton">Clear</button>
+    </div>
+
+    <script>
+      var video = document.querySelector("#videoElement");
+      var dropArea = document.querySelector("#dropArea");
+      var clearButton = document.querySelector("#clearButton");
+      var isCameraOn = true;
+
+      if (navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices
+          .getUserMedia({ video: true })
+          .then(function (stream) {
+            video.srcObject = stream;
+          })
+          .catch(function (error) {
+            console.log("Something went wrong!");
+          });
+      }
+
+      function preventDefault(event) {
+        event.preventDefault();
+      }
+
+      function handleDrop(event) {
+        event.preventDefault();
+        var file = event.dataTransfer.files[0];
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          dropArea.style.backgroundImage = "url('" + e.target.result + "')";
+          dropArea.style.backgroundSize = "contain";
+          dropArea.style.backgroundRepeat = "no-repeat";
+          dropArea.innerHTML = "";
+          saveImage(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function saveImage(imageData) {
+        // Generate a unique filename using a timestamp
+        var timestamp = new Date().getTime();
+        var filename = "image_" + timestamp + ".jpg";
+
+        // Send a POST request to the server with the image data and filename
+        fetch("/save_image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ image_data: imageData, filename: filename }),
+        })
+          .then(function (response) {
+            console.log("Image saved successfully");
+          })
+          .catch(function (error) {
+            console.error("Error saving image:", error);
+          });
+      }
+
+      function clearDropArea() {
+        dropArea.style.backgroundImage = "none";
+        dropArea.innerHTML = "<p>Drag and drop the image here to save:</p>";
+      }
+
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "s") {
+          captureScreenshot();
+        }
+      });
+
+      function captureScreenshot() {
+        var timestamp = new Date().getTime();
+        var filename = "screenshot_" + timestamp + ".png";
+
+        fetch("/capture_screenshot", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ filename: filename }),
+        })
+          .then(function (response) {
+            console.log("Screenshot captured successfully");
+          })
+          .catch(function (error) {
+            console.error("Error capturing screenshot:", error);
+          });
+      }
+
+      function toggleCamera() {
+        isCameraOn = !isCameraOn;
+        if (isCameraOn) {
+          navigator.mediaDevices
+            .getUserMedia({ video: true })
+            .then(function (stream) {
+              video.srcObject = stream;
+            })
+            .catch(function (error) {
+              console.log("Something went wrong!");
+            });
+        } else {
+          var stream = video.srcObject;
+          var tracks = stream.getTracks();
+          tracks.forEach(function (track) {
+            track.stop();
+          });
+          video.srcObject = null;
+        }
+      }
+
+      dropArea.addEventListener("dragenter", preventDefault);
+      dropArea.addEventListener("dragover", preventDefault);
+      dropArea.addEventListener("drop", handleDrop);
+      clearButton.addEventListener("click", clearDropArea);
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "e") {
+          toggleCamera();
+        }
+      });
+    </script>
+  </body>
+</html>
