@@ -4,7 +4,7 @@ import pyautogui
 import cv2
 from PIL import Image
 from predictor import Predictor
-from flask import Flask, request, send_from_directory
+from flask import Flask, request, send_from_directory, jsonify
 
 app = Flask(__name__)
 
@@ -33,7 +33,7 @@ def save_image():
 
     result = predictor(img)
 
-    return 'Image saved'
+    return jsonify(result=result[0])
 
 
 @app.route('/capture_screenshot', methods=['POST'])
