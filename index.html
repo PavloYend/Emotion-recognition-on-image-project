@@ -95,19 +95,28 @@
 
         // Send a POST request to the server with the image data and filename
         fetch("/save_image", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ image_data: imageData, filename: filename }),
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ image_data: imageData, filename: filename }),
         })
-          .then(function (response) {
-            console.log("Image saved successfully");
-          })
-          .catch(function (error) {
+        .then(function (response) {
+            if (response.ok) {
+                // Parse the JSON response
+                return response.json();
+            } else {
+                throw new Error("Error saving image");
+            }
+        })
+        .then(function (data) {
+            // Access the result from the response
+            var result = data.result;
+            console.log("Result:", result);
+        })
+        .catch(function (error) {
             console.error("Error saving image:", error);
-          });
-      }
+        })
 
       function clearDropArea() {
         dropArea.style.backgroundImage = "none";
