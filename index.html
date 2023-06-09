@@ -45,10 +45,13 @@
       <video autoplay="true" id="videoElement"></video>
     </div>
 
+    <ul id="emotions"></ul>
+
     <div id="dropArea">
       <p>Drag and drop the image here to save:</p>
+      
+      
     </div>
-
     <div id="controls">
       <button id="clearButton">Clear</button>
     </div>
@@ -88,6 +91,27 @@
         reader.readAsDataURL(file);
       }
 
+      // function saveImage(imageData) {
+      //   // Generate a unique filename using a timestamp
+      //   var timestamp = new Date().getTime();
+      //   var filename = "image_" + timestamp + ".jpg";
+
+      //   // Send a POST request to the server with the image data and filename
+      //   fetch("/save_image", {
+      //     method: "POST",
+      //     headers: {
+      //       "Content-Type": "application/json",
+      //     },
+      //     body: JSON.stringify({ image_data: imageData, filename: filename }),
+      //   })
+      //     .then(function (response) {
+      //       console.log("Image saved successfully");
+      //     })
+      //     .catch(function (error) {
+      //       console.error("Error saving image:", error);
+      //     });
+      // }
+
       function saveImage(imageData) {
         // Generate a unique filename using a timestamp
         var timestamp = new Date().getTime();
@@ -113,10 +137,14 @@
             // Access the result from the response
             var result = data.result;
             console.log("Result:", result);
+            createList(result);
         })
         .catch(function (error) {
             console.error("Error saving image:", error);
-        })
+        });
+
+
+      }
 
       function clearDropArea() {
         dropArea.style.backgroundImage = "none";
@@ -166,6 +194,23 @@
             track.stop();
           });
           video.srcObject = null;
+        }
+      }
+
+      function createList(json) {
+        var list = document.getElementById('emotions');
+
+        while (list.firstChild) {
+          list.removeChild(list.firstChild);
+        }
+
+        // Iterate over the JSON object and create list items
+        for (var key in json) {
+          if (json.hasOwnProperty(key)) {
+            var listItem = document.createElement('li');
+            listItem.innerHTML = key + ': ' + json[key];
+            list.appendChild(listItem);
+          }
         }
       }
 
