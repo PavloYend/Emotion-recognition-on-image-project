@@ -7,7 +7,7 @@ from model import *
 class Predictor():
 
     def __init__(self, model_path):
-        self.model = EmotionClassifier_v4()
+        self.model = EmotionClassifier_v1()
         self.model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
         self.model.eval()
 
