@@ -7,7 +7,7 @@ from flask import Flask, request, send_from_directory, jsonify
 
 app = Flask(__name__)
 
-predictor = Predictor('./models/model_v4')
+predictor = Predictor('./models/model_v2')
 
 
 @app.route('/')
