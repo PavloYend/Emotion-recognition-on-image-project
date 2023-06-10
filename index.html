@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Display Webcam Stream</title>
+
+    <style>
+      #dropArea {
+        width: 500px;
+        height: 50px;
+        border: 2px dashed #ccc;
+        margin-top: 20px;
+        padding: 10px;
+        text-align: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <button id="start-camera">Start Camera</button>
+    <video id="video" width="320" height="240" autoplay></video>
+    <button id="click-photo">Click Photo</button>
+    <canvas id="canvas" width="320" height="240"></canvas>
+
+    <ul id="cameraResults"></ul>
+
+    <div id="dropArea">
+      <p>Drag and drop the image here to save:</p>
+    </div>
+
+    <ul id="dropResults"></ul>
+
+    <script>
+      let camera_button = document.querySelector("#start-camera");
+      let video = document.querySelector("#video");
+      let click_button = document.querySelector("#click-photo");
+      let canvas = document.querySelector("#canvas");
+      var clearButton = document.querySelector("#clearButton");
+      let cameraResults = {};
+      let dropResults = {};
+
+      camera_button.addEventListener("click", async function () {
+        let stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        });
+        video.srcObject = stream;
+      });
+
+      click_button.addEventListener("click", function () {
+        canvas
+          .getContext("2d")
+          .drawImage(video, 0, 0, canvas.width, canvas.height);
+        let image_data_url = canvas.toDataURL("image/jpeg");
+
+        // data url of the image
+        console.log(image_data_url);
+        savePhoto(image_data_url);
+      });
+
+      function savePhoto(image_data_url) {
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", "/save-photo", true);
+        xhr.setRequestHeader(
+          "Content-Type",
+          "application/x-www-form-urlencoded"
+        );
+        xhr.onreadystatechange = function () {
+          if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            console.log("Photo saved successfully");
+            let response = JSON.parse(xhr.responseText);
+            let result = response.result;
+            let transformedImgBase64 = response.transformed_img;
+            console.log("Result:", result);
+            cameraResults = result;
+            createList(cameraResults, "camera", transformedImgBase64);
+          }
+        };
+        xhr.send("image_data_url=" + encodeURIComponent(image_data_url));
+      }
+
+      function preventDefault(event) {
+        event.preventDefault();
+      }
+
+      function handleDrop(event) {
+        event.preventDefault();
+        var file = event.dataTransfer.files[0];
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          dropArea.style.backgroundImage = "url('" + e.target.result + "')";
+          dropArea.style.backgroundSize = "contain";
+          dropArea.style.backgroundRepeat = "no-repeat";
+          dropArea.innerHTML = "";
+          saveImage(e.target.result);
+        };
+        reader.readAsDataURL(file);
+      }
+
+      function saveImage(imageData) {
+        // Generate a unique filename using a timestamp
+        var timestamp = new Date().getTime();
+        var filename = "image_" + timestamp + ".jpg";
+
+        // Send a POST request to the server with the image data and filename
+        fetch("/save_image", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ image_data: imageData, filename: filename }),
+        })
+          .then(function (response) {
+            if (response.ok) {
+              // Parse the JSON response
+              return response.json();
+            } else {
+              throw new Error("Error saving image");
+            }
+          })
+          .then(function (data) {
+            // Access the result and transformed_img from the response
+            var result = data.result;
+            var transformedImgBase64 = data.transformed_img;
+            console.log("Result:", result);
+            createList(result, "drop", transformedImgBase64);
+          })
+          .catch(function (error) {
+            console.error("Error saving image:", error);
+          });
+      }
+
+      function clearDropArea() {
+        dropArea.style.backgroundImage = "none";
+        dropArea.innerHTML = "<p>Drag and drop the image here to save:</p>";
+      }
+
+      function createList(json, type, transformedImgBase64) {
+        var list;
+        if (type === "camera") {
+          list = document.getElementById("cameraResults");
+        } else if (type === "drop") {
+          list = document.getElementById("dropResults");
+        }
+
+        // Remove the previous list items of the same type
+        while (list.firstChild) {
+          list.removeChild(list.firstChild);
+        }
+
+        // Create an image element for displaying the transformed image
+        var img = document.createElement("img");
+        img.src = "data:image/jpeg;base64," + transformedImgBase64;
+        img.width = 320;
+        img.height = 240;
+        list.appendChild(img);
+
+        // Iterate over the JSON object and create list items for emotions
+        for (var key in json) {
+          if (json.hasOwnProperty(key)) {
+            var listItem = document.createElement("li");
+            listItem.innerHTML = key + ": " + json[key];
+            list.appendChild(listItem);
+          }
+        }
+      }
+
+      dropArea.addEventListener("dragenter", preventDefault);
+      dropArea.addEventListener("dragover", preventDefault);
+      dropArea.addEventListener("drop", handleDrop);
+      clearButton.addEventListener("click", clearDropArea);
+    </script>
+  </body>
+</html>
+
